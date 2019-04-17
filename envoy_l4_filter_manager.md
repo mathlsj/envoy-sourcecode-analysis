@@ -16,5 +16,22 @@ L4 过滤有三个不同类型的过滤器：
 
 ![envoy_L4_filter_manager](./images/envoy_l4_filter_manager.png) 
 
+## FilterManagerImpl 
+
+所有的 L4 filter FilterManager 都由 `FilterManagerImpl`  进行管理。它提供6个接口，其中 4个接口是和 `FilterManager` 一样。其余两个则是读和写。
+
+### addWriteFilter
+
+调用此接口，直接将其添加到下游过滤器。
+
+```
+void FilterManagerImpl::addWriteFilter(WriteFilterSharedPtr filter) {
+  ASSERT(connection_.state() == Connection::State::Open);
+  downstream_filters_.emplace_front(filter);
+}
+```
+
+### addReadFilter
+
 
 
