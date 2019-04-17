@@ -345,7 +345,7 @@ void ListenerImpl::listenCallback(evconnlistener*, evutil_socket_t fd, sockaddr*
 
 ## connection
 
-`connection` 是连接相关的操作，客户端和服务端的连接都属于这个类。 `Connection` 是针对原始连接的一个抽象，继承自 `DeferredDeletable` 和 `FilterManager`。关于 `DeferredDeletable` 延迟析构请看 [Envoy 源码分析－－event](https://www.cnblogs.com/mathli/p/10674391.html)，`FilterManager` 以后讨论。
+`connection` 是连接相关的操作，客户端和服务端的连接都属于这个类。 `Connection` 是针对原始连接的一个抽象，继承自 `DeferredDeletable` 和 `FilterManager`。关于 `DeferredDeletable` 延迟析构请看 [Envoy 源码分析－－event](./envoy_event.md)，`FilterManager` 以后讨论。
 
 ### ConnectionImpl
 
