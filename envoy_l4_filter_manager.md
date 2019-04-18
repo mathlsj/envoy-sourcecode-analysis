@@ -33,5 +33,84 @@ void FilterManagerImpl::addWriteFilter(WriteFilterSharedPtr filter) {
 
 ### addReadFilter
 
+新建 `ActiveReadFilter`，加入下游过滤器。
 
+```
+void FilterManagerImpl::addReadFilter(ReadFilterSharedPtr filter) {
+  ASSERT(connection_.state() == Connection::State::Open);
+  ActiveReadFilterPtr new_filter(new ActiveReadFilter{*this, filter});
+  filter->initializeReadFilterCallbacks(*new_filter);
+  new_filter->moveIntoListBack(std::move(new_filter), upstream_filters_);
+}
+```
 
+### addFilter
+
+加入上游过滤器和下游过滤器
+
+void FilterManagerImpl::addFilter(FilterSharedPtr filter) {
+  addReadFilter(filter);
+  addWriteFilter(filter);
+}
+
+### initializeReadFilters
+
+初始化读过滤器，会调用各个过滤器的 `onNewConnection` 。
+
+```
+for (; entry != upstream_filters_.end(); entry++) {
+  if (!(*entry)->initialized_) {
+    (*entry)->initialized_ = true;
+    FilterStatus status = (*entry)->filter_->onNewConnection();
+    if (status == FilterStatus::StopIteration) {
+      return;
+    }
+  }
+```
+
+### onRead
+
+如果没有初始化调用 `onNewConnection`，然后获取读缓冲，对缓冲数据处理调用 `onData`。
+
+```
+  for (; entry != upstream_filters_.end(); entry++) {
+    //未初始化，调用onNewConnection
+    if (!(*entry)->initialized_) {
+      (*entry)->initialized_ = true;
+      FilterStatus status = (*entry)->filter_->onNewConnection();
+      //需要过滤的数据，直接退出。
+      if (status == FilterStatus::StopIteration) {
+        return;
+      }
+    }
+
+    BufferSource::StreamBuffer read_buffer = buffer_source_.getReadBuffer();
+    if (read_buffer.buffer.length() > 0 || read_buffer.end_stream) {
+      //调用onData进行处理
+      FilterStatus status = (*entry)->filter_->onData(read_buffer.buffer, read_buffer.end_stream);
+      //需要过滤的数据，直接退出。
+      if (status == FilterStatus::StopIteration) {
+        return;
+      }
+    }
+  }
+```
+
+### onWrite
+
+获取写缓冲，过滤写缓冲。
+
+```
+FilterStatus FilterManagerImpl::onWrite() {
+  for (const WriteFilterSharedPtr& filter : downstream_filters_) {
+    //获取写缓冲，调用onWrite
+    BufferSource::StreamBuffer write_buffer = buffer_source_.getWriteBuffer();
+    FilterStatus status = filter->onWrite(write_buffer.buffer, write_buffer.end_stream);
+    if (status == FilterStatus::StopIteration) {
+      return status;
+    }
+  }
+
+  return FilterStatus::Continue;
+}
+```
