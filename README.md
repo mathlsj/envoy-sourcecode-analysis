@@ -8,4 +8,5 @@
 * [网络](envoy_network.md)
 * [网络L4过滤管理](envoy_l4_filter_manager.md)
 * [程序初始化](envoy_initialization.md)
+* [LDS初始化](envoy_lds.md)
 * [热重启](evnvoy_hot_restart.md)
