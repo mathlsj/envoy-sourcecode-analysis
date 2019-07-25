@@ -2,6 +2,16 @@
 
 LDS 是 Envoy 用来自动获取 listener 的 API。 Envoy 通过 API 可以增加、修改或删除 listener。
 
+先来总结下 listener 的更新语义如下：
+
++ 每个 listener 必须有一个唯一的名称。如果没有提供名称，Envoy 会生成一个 UUID 来作为它的名字。要动态更新 listener，管理服务必须提供一个唯一名称。
++ 当 listener 被添加，在接收流量之前，会先进入 “预热” 阶段。
++ 一旦 listener 被创建，就会保持不变。因此，listener 更新时，会创建一个全新的 listener（同一个侦听套接字）。这个新增加的 listener 同样需要一个 “预热” 过程。
++ 当更新或删除 listener 时，旧的 listener 将被置于 “draining（驱逐）” 状态，和整个服务重新启动时一样。在删除侦听器并关闭任何其余连接之前，侦听器拥有的连接将在一段时间内优雅关闭（如果可能的话）。逐出时间通过 `--drain-time-s` 设置。
++ 相同名称的 listener 必须要有相同的配置地址。
+
+接下来是对 lds 进行源码分析，对各种语义的情况都可以在源码中看到。
+
 ## 初始化
 
 在初始化 bootstrap 配置时，如果有 lds 配置会进行初始化。
@@ -261,12 +271,3 @@ void ListenerManagerImpl::onListenerWarmed(ListenerImpl& listener) {
 }
 ```
 
-## 总结
-
-listener 的更新语义如下：
-
-+ 每个 listener 必须有一个唯一的名称。如果没有提供名称，Envoy 会生成一个 UUID 来作为它的名字。要动态更新 listener，管理服务必须提供一个唯一名称。
-+ 当 listener 被添加，在接收流量之前，会先进入 “预热” 阶段。
-+ 一旦 listener 被创建，就会保持不变。因此，listener 更新时，会创建一个全新的 listener（同一个侦听套接字）。这个新增加的 listener 同样需要一个 “预热” 过程。
-+ 当更新或删除 listener 时，旧的 listener 将被置于 “draining（驱逐）” 状态，和整个服务重新启动时一样。在删除侦听器并关闭任何其余连接之前，侦听器拥有的连接将在一段时间内优雅关闭（如果可能的话）。逐出时间通过 `--drain-time-s` 设置。
-+ 相同名称的 listener 必须要有相同的配置地址。
