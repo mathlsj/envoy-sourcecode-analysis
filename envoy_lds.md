@@ -32,7 +32,7 @@ return std::make_unique<LdsApiImpl>(lds_config, server_.clusterManager(), server
 }
 ```
 
-初始化 lds 时，会创建一个通道。
+新建 lds 时，会创建一个通道。
 
 ```
 LdsApiImpl::LdsApiImpl(const envoy::api::v2::core::ConfigSource& lds_config,
@@ -55,14 +55,14 @@ LdsApiImpl::LdsApiImpl(const envoy::api::v2::core::ConfigSource& lds_config,
 
 ## 更新
 
-有数据下发时，会触发 onConfigUpdate。
+有数据下发时，通道调用 callback 触发 onConfigUpdate。
 
 ```
 // the configuration update targets.
 callbacks_->onConfigUpdate(resources, version_info);
 ```
 
-移除 listener。创建一个移除的列表，将现有的 listener 加入，然后去除数据下发的 listener，剩下的就是需要移除的 listener。移除的 listener 会打印 `lds: remove listener '{}'`。
+配置更新过程中如何判断哪些是移除的 listener？。首先创建一个移除的列表，将现有的 listener 加入，然后去除数据下发的 listener，剩下的就是需要移除的 listener。移除的 listener 会打印 `lds: remove listener '{}'`。
 
 ```
   // We build the list of listeners to be removed and remove them before
@@ -123,7 +123,7 @@ callbacks_->onConfigUpdate(resources, version_info);
   });
 ```
 
-接下来是对所有的 listener 进行增加或更新。需要增加或更新打印日志`lds: add/update listener '{}'`。
+接下来是对配置内的 listener 进行增加或更新。增加或更新 listener 打印日志 `lds: add/update listener '{}'`。
 
 ```
   for (const auto& listener : listeners) {
@@ -151,7 +151,7 @@ callbacks_->onConfigUpdate(resources, version_info);
   }
 ```
 
-不论是增加还是更新 listener 都是直接新建。
+不论是增加还是更新 listener 都是直接新建，旧的 listener 会被 “draining（驱逐）” 。
 
 ```
   ListenerImplPtr new_listener(
@@ -159,7 +159,7 @@ callbacks_->onConfigUpdate(resources, version_info);
   ListenerImpl& new_listener_ref = *new_listener;
 ```
 
-相同名称的 listener 必须有相同的配置地址。
+判断相同名称的 listener 必须有相同的配置地址。
 
 ```
   if ((existing_warming_listener != warming_listeners_.end() &&
